@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stopwatch Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .stopwatch-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .title {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .time-display {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .time-display::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.8s ease;
+        }
+
+        .time-display.flash::before {
+            left: 100%;
+        }
+
+        .main-time {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #00bcd4;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 20px rgba(0, 188, 212, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .milliseconds {
+            font-size: 1.5rem;
+            color: #80deea;
+            font-family: 'Courier New', monospace;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            min-width: 120px;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .start-btn {
+            background: linear-gradient(45deg, #4caf50, #45a049);
+            color: white;
+        }
+
+        .pause-btn {
+            background: linear-gradient(45deg, #ff9800, #f57c00);
+            color: white;
+        }
+
+        .reset-btn {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+            color: white;
+        }
+
+        .lap-btn {
+            background: linear-gradient(45deg, #2196f3, #1976d2);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .lap-times {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .lap-times h3 {
+            color: white;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .lap-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            color: white;
+            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .lap-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        .lap-number {
+            font-weight: bold;
+            color: #00bcd4;
+        }
+
+        .lap-time {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+        }
+
+        .lap-diff {
+            font-size: 0.9rem;
+            color: #80deea;
+        }
+
+        .fastest {
+            background: rgba(76, 175, 80, 0.3) !important;
+            border-left: 4px solid #4caf50;
+        }
+
+        .slowest {
+            background: rgba(244, 67, 54, 0.3) !important;
+            border-left: 4px solid #f44336;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .stat-item {
+            text-align: center;
+            color: white;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+
+        .empty-state {
+            color: rgba(255, 255, 255, 0.6);
+            font-style: italic;
+            padding: 20px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            .stopwatch-container {
+                padding: 20px;
+            }
+
+            .title {
+                font-size: 2rem;
+            }
+
+            .main-time {
+                font-size: 3rem;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 200px;
+            }
+
+            .lap-item {
+                flex-direction: column;
+                text-align: center;
+                gap: 5px;
+            }
+        }
+
+        /* Pulsing animation for running state */
+        .running .time-display {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0, 188, 212, 0.4); }
+            50% { box-shadow: 0 0 0 20px rgba(0, 188, 212, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="stopwatch-container">
+        <h1 class="title">⏱️ Stopwatch Pro</h1>
+        
+        <div class="time-display">
+            <div class="main-time" id="mainTime">00:00:00</div>
+            <div class="milliseconds" id="milliseconds">000</div>
+        </div>
+
+        <div class="controls">
+            <button class="btn start-btn" id="startBtn">Start</button>
+            <button class="btn pause-btn" id="pauseBtn" disabled>Pause</button>
+            <button class="btn lap-btn" id="lapBtn" disabled>Lap</button>
+            <button class="btn reset-btn" id="resetBtn">Reset</button>
+        </div>
+
+        <div class="lap-times">
+            <h3>Lap Times</h3>
+            <div id="lapList" class="empty-state">No laps recorded yet</div>
+            <div class="stats" id="stats" style="display: none;">
+                <div class="stat-item">
+                    <div class="stat-label">Total Laps</div>
+                    <div class="stat-value" id="totalLaps">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Fastest</div>
+                    <div class="stat-value" id="fastestLap">--:--:--</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Slowest</div>
+                    <div class="stat-value" id="slowestLap">--:--:--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class Stopwatch {
+            constructor() {
+                this.startTime = 0;
+                this.elapsedTime = 0;
+                this.isRunning = false;
+                this.intervalId = null;
+                this.laps = [];
+                this.lastLapTime = 0;
+                
+                this.initializeElements();
+                this.bindEvents();
+            }
+
+            initializeElements() {
+                this.mainTimeEl = document.getElementById('mainTime');
+                this.millisecondsEl = document.getElementById('milliseconds');
+                this.startBtn = document.getElementById('startBtn');
+                this.pauseBtn = document.getElementById('pauseBtn');
+                this.lapBtn = document.getElementById('lapBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.lapList = document.getElementById('lapList');
+                this.stats = document.getElementById('stats');
+                this.totalLapsEl = document.getElementById('totalLaps');
+                this.fastestLapEl = document.getElementById('fastestLap');
+                this.slowestLapEl = document.getElementById('slowestLap');
+                this.container = document.querySelector('.stopwatch-container');
+                this.timeDisplay = document.querySelector('.time-display');
+            }
+
+            bindEvents() {
+                this.startBtn.addEventListener('click', () => this.start());
+                this.pauseBtn.addEventListener('click', () => this.pause());
+                this.lapBtn.addEventListener('click', () => this.recordLap());
+                this.resetBtn.addEventListener('click', () => this.reset());
+                
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space') {
+                        e.preventDefault();
+                        this.isRunning ? this.pause() : this.start();
+                    } else if (e.code === 'KeyL' && this.isRunning) {
+                        this.recordLap();
+                    } else if (e.code === 'KeyR') {
+                        this.reset();
+                    }
+                });
+            }
+
+            start() {
+                if (!this.isRunning) {
+                    this.startTime = Date.now() - this.elapsedTime;
+                    this.isRunning = true;
+                    this.intervalId = setInterval(() => this.updateDisplay(), 10);
+                    
+                    this.startBtn.disabled = true;
+                    this.pauseBtn.disabled = false;
+                    this.lapBtn.disabled = false;
+                    this.startBtn.textContent = 'Running...';
+                    
+                    this.container.classList.add('running');
+                    this.flashTimeDisplay();
+                }
+            }
+
+            pause() {
+                if (this.isRunning) {
+                    this.isRunning = false;
+                    clearInterval(this.intervalId);
+                    
+                    this.startBtn.disabled = false;
+                    this.pauseBtn.disabled = true;
+                    this.lapBtn.disabled = true;
+                    this.startBtn.textContent = 'Resume';
+                    
+                    this.container.classList.remove('running');
+                    this.flashTimeDisplay();
+                }
+            }
+
+            reset() {
+                this.isRunning = false;
+                clearInterval(this.intervalId);
+                this.elapsedTime = 0;
+                this.startTime = 0;
+                this.laps = [];
+                this.lastLapTime = 0;
+                
+                this.updateDisplay();
+                this.updateLapDisplay();
+                
+                this.startBtn.disabled = false;
+                this.pauseBtn.disabled = true;
+                this.lapBtn.disabled = true;
+                this.startBtn.textContent = 'Start';
+                
+                this.container.classList.remove('running');
+                this.flashTimeDisplay();
+            }
+
+            recordLap() {
+                if (this.isRunning) {
+                    const currentTime = this.elapsedTime;
+                    const lapTime = currentTime - this.lastLapTime;
+                    
+                    this.laps.push({
+                        number: this.laps.length + 1,
+                        totalTime: currentTime,
+                        lapTime: lapTime
+                    });
+                    
+                    this.lastLapTime = currentTime;
+                    this.updateLapDisplay();
+                    this.flashTimeDisplay();
+                }
+            }
+
+            updateDisplay() {
+                if (this.isRunning) {
+                    this.elapsedTime = Date.now() - this.startTime;
+                }
+                
+                const time = this.formatTime(this.elapsedTime);
+                this.mainTimeEl.textContent = time.main;
+                this.millisecondsEl.textContent = time.milliseconds;
+            }
+
+            formatTime(ms) {
+                const totalSeconds = Math.floor(ms / 1000);
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+                const milliseconds = Math.floor((ms % 1000) / 10);
+                
+                return {
+                    main: `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
+                    milliseconds: milliseconds.toString().padStart(2, '0')
+                };
+            }
+
+            updateLapDisplay() {
+                if (this.laps.length === 0) {
+                    this.lapList.innerHTML = '<div class="empty-state">No laps recorded yet</div>';
+                    this.stats.style.display = 'none';
+                    return;
+                }
+
+                // Find fastest and slowest laps
+                const lapTimes = this.laps.map(lap => lap.lapTime);
+                const fastestTime = Math.min(...lapTimes);
+                const slowestTime = Math.max(...lapTimes);
+
+                let html = '';
+                this.laps.slice().reverse().forEach((lap, index) => {
+                    const isReversed = true;
+                    const actualIndex = this.laps.length - 1 - index;
+                    const actualLap = this.laps[actualIndex];
+                    
+                    let className = 'lap-item';
+                    if (actualLap.lapTime === fastestTime && this.laps.length > 1) {
+                        className += ' fastest';
+                    } else if (actualLap.lapTime === slowestTime && this.laps.length > 1) {
+                        className += ' slowest';
+                    }
+                    
+                    const lapTimeFormatted = this.formatTime(actualLap.lapTime);
+                    const totalTimeFormatted = this.formatTime(actualLap.totalTime);
+                    
+                    html += `
+                        <div class="${className}">
+                            <div class="lap-number">Lap ${actualLap.number}</div>
+                            <div class="lap-time">${lapTimeFormatted.main}:${lapTimeFormatted.milliseconds}</div>
+                            <div class="lap-diff">Total: ${totalTimeFormatted.main}:${totalTimeFormatted.milliseconds}</div>
+                        </div>
+                    `;
+                });
+
+                this.lapList.innerHTML = html;
+                
+                // Update statistics
+                this.stats.style.display = 'flex';
+                this.totalLapsEl.textContent = this.laps.length;
+                
+                const fastestFormatted = this.formatTime(fastestTime);
+                const slowestFormatted = this.formatTime(slowestTime);
+                
+                this.fastestLapEl.textContent = `${fastestFormatted.main}:${fastestFormatted.milliseconds}`;
+                this.slowestLapEl.textContent = `${slowestFormatted.main}:${slowestFormatted.milliseconds}`;
+            }
+
+            flashTimeDisplay() {
+                this.timeDisplay.classList.add('flash');
+                setTimeout(() => {
+                    this.timeDisplay.classList.remove('flash');
+                }, 200);
+            }
+        }
+
+        // Initialize the stopwatch when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new Stopwatch();
+        });
+    </script>
+</body>
+</html>
